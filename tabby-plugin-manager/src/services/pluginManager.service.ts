@@ -1,15 +1,12 @@
 import axios from 'axios'
 import { compare as semverCompare } from 'semver'
-import { Observable, from, forkJoin, map } from 'rxjs'
+import { Observable, from, forkJoin, map, of } from 'rxjs'
 import { Injectable, Inject } from '@angular/core'
 import { Logger, LogService, PlatformService, BOOTSTRAP_DATA, BootstrapData, PluginInfo } from 'tabby-core'
+import { PLUGIN_BLACKLIST } from '../../../app/src/pluginBlacklist'
 
 const OFFICIAL_NPM_ACCOUNT = 'eugenepankov'
 
-const BLACKLIST = [
-    'terminus-shell-selector', // superseded by profiles
-    'terminus-scrollbar', // now useless
-]
 
 @Injectable({ providedIn: 'root' })
 export class PluginManagerService {
@@ -32,16 +29,29 @@ export class PluginManagerService {
         return forkJoin(
             this._listAvailableInternal('tabby-', 'tabby-plugin', query),
             this._listAvailableInternal('terminus-', 'terminus-plugin', query),
-        ).pipe(map(x => x.reduce((a, b) => a.concat(b), [])))
+        ).pipe(
+            map(x => x.reduce((a, b) => a.concat(b), [])),
+            map(x => {
+                const names = new Set<string>()
+                return x.filter(item => {
+                    if (names.has(item.name)) {
+                        return false
+                    }
+                    names.add(item.name)
+                    return true
+                })
+            }),
+            map(x => x.sort((a, b) => a.name.localeCompare(b.name))),
+        )
+    }
+
+    listInstalled (query: string): Observable<PluginInfo[]> {
+        return of(this.installedPlugins.filter(x=>x.name.includes(query)))
     }
 
     _listAvailableInternal (namePrefix: string, keyword: string, query?: string): Observable<PluginInfo[]> {
         return from(
-            axios.get(`https://www.npmjs.com/search?q=keywords%3A${keyword}+${encodeURIComponent(query ?? '')}&from=0&size=1000`, {
-                headers: {
-                    'x-spiferack': '1',
-                },
-            })
+            axios.get(`https://registry.npmjs.com/-/v1/search?text=keywords%3A${keyword}%20${query}&size=250`),
         ).pipe(
             map(response => response.data.objects
                 .filter(item => !item.keywords?.includes('tabby-dummy-transition-plugin'))
@@ -51,15 +61,16 @@ export class PluginManagerService {
                     description: item.package.description,
                     version: item.package.version,
                     homepage: item.package.links.homepage,
-                    author: (item.package.author || {}).name,
-                    isOfficial: item.package.publisher.name === OFFICIAL_NPM_ACCOUNT,
-                }))
+                    author: item.package.author?.name,
+                    isOfficial: item.package.publisher.username === OFFICIAL_NPM_ACCOUNT,
+                })),
             ),
             map(plugins => plugins.filter(x => x.packageName.startsWith(namePrefix))),
-            map(plugins => plugins.filter(x => !BLACKLIST.includes(x.packageName))),
+            map(plugins => plugins.filter(x => !PLUGIN_BLACKLIST.includes(x.packageName))),
             map(plugins => {
                 const mapping: Record<string, PluginInfo[]> = {}
                 for (const p of plugins) {
+                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                     mapping[p.name] ??= []
                     mapping[p.name].push(p)
                 }

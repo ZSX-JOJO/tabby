@@ -1,12 +1,14 @@
 import { Component, HostBinding } from '@angular/core'
-import { ConfigService, HostAppService, Platform, PlatformService } from 'tabby-core'
+import { ConfigService, HostAppService, Platform, PlatformService, altKeyName, metaKeyName } from 'tabby-core'
 
 /** @hidden */
 @Component({
-    template: require('./terminalSettingsTab.component.pug'),
+    templateUrl: './terminalSettingsTab.component.pug',
 })
 export class TerminalSettingsTabComponent {
     Platform = Platform
+    altKeyName = altKeyName
+    metaKeyName = metaKeyName
 
     @HostBinding('class.content-box') true
 

@@ -1,4 +1,4 @@
-import socksv5 from 'socksv5'
+import socksv5 from '@luminati-io/socksv5'
 import { Server, Socket, createServer } from 'net'
 
 import { ForwardedPortConfig, PortForwardType } from '../api'
@@ -9,6 +9,7 @@ export class ForwardedPort implements ForwardedPortConfig {
     port: number
     targetAddress: string
     targetPort: number
+    description: string
 
     private listener: Server|null = null
 

@@ -1,5 +1,4 @@
-import { Profile } from 'tabby-core'
-import { LoginScriptsOptions } from 'tabby-terminal'
+import { ConnectableTerminalProfile, InputProcessingOptions, LoginScriptsOptions } from 'tabby-terminal'
 
 export enum SSHAlgorithmType {
     HMAC = 'hmac',
@@ -8,7 +7,7 @@ export enum SSHAlgorithmType {
     HOSTKEY = 'serverHostKey',
 }
 
-export interface SSHProfile extends Profile {
+export interface SSHProfile extends ConnectableTerminalProfile {
     options: SSHProfileOptions
 }
 
@@ -30,6 +29,12 @@ export interface SSHProfileOptions extends LoginScriptsOptions {
     algorithms?: Record<string, string[]>
     proxyCommand?: string
     forwardedPorts?: ForwardedPortConfig[]
+    socksProxyHost?: string
+    socksProxyPort?: number
+    httpProxyHost?: string
+    httpProxyPort?: number
+    reuseSession?: boolean
+    input: InputProcessingOptions,
 }
 
 export enum PortForwardType {
@@ -44,10 +49,5 @@ export interface ForwardedPortConfig {
     port: number
     targetAddress: string
     targetPort: number
+    description: string
 }
-
-export const ALGORITHM_BLACKLIST = [
-    // cause native crashes in node crypto, use EC instead
-    'diffie-hellman-group-exchange-sha256',
-    'diffie-hellman-group-exchange-sha1',
-]
